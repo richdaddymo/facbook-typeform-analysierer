@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Ad Campaign Analyzer v3.4 – Dual Source & Compare</title>
+  <title>AI Ad Campaign Analyzer v3.8 – With Tooltips</title>
   <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PapaParse for CSV -->
@@ -31,6 +31,58 @@
     .loser{background-color:rgba(239,68,68,.1);color:#fca5a5}
     details>summary{cursor:pointer; list-style: none;}
     details>summary::-webkit-details-marker { display: none; }
+    .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #4b5563;
+        color: #e5e7eb;
+        font-style: normal;
+        font-weight: bold;
+        font-size: 10px;
+        cursor: help;
+        position: relative;
+        margin-left: 5px;
+    }
+    .info-icon .tooltip-text {
+        visibility: hidden;
+        width: 250px;
+        background-color: #111827;
+        color: #fff;
+        text-align: left;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 10;
+        top: 150%; /* Changed from bottom to top */
+        left: 50%;
+        margin-left: -125px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 12px;
+        line-height: 1.4;
+        font-weight: normal;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        border: 1px solid #374151;
+        pointer-events: none;
+    }
+    .info-icon .tooltip-text::after {
+        content: "";
+        position: absolute;
+        bottom: 100%; /* At the top of the tooltip */
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent #111827 transparent;
+    }
+    .info-icon:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-200 antialiased">
@@ -78,27 +130,27 @@
           </select>
         </div>
         <div id="cplBox">
-          <label class="block text-sm mb-1">Ziel‑CPL (€)</label>
+          <label class="block text-sm mb-1">Ziel‑CPL (€) <span class="info-icon">i<span class="tooltip-text">Cost-per-Lead. Gesamtkosten / Anzahl der Leads. Gibt an, wie viel Sie im Durchschnitt für einen neuen Lead bezahlen.</span></span></label>
           <input id="targetCPL" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 12" />
         </div>
         <div id="cpaBox" class="hidden">
-          <label class="block text-sm mb-1">Ziel‑CPA (€)</label>
+          <label class="block text-sm mb-1">Ziel‑CPA (€) <span class="info-icon">i<span class="tooltip-text">Cost-per-Acquisition. Gesamtkosten / Anzahl der Käufe. Gibt an, wie viel Sie im Durchschnitt für einen neuen Kunden bezahlen.</span></span></label>
           <input id="targetCPA" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 40" />
         </div>
         <div id="roasBox" class="hidden">
-          <label class="block text-sm mb-1">Mindest‑ROAS</label>
+          <label class="block text-sm mb-1">Mindest‑ROAS <span class="info-icon">i<span class="tooltip-text">Return on Ad Spend. Umsatz / Gesamtkosten. Ein ROAS von 3 bedeutet, dass Sie für jeden investierten Euro 3 Euro Umsatz generieren.</span></span></label>
           <input id="targetROAS" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 2.0" />
         </div>
         <div>
-          <label class="block text-sm mb-1">Durchschnittlicher Auftragswert (AOV, €)</label>
+          <label class="block text-sm mb-1">Durchschn. Auftragswert (AOV, €) <span class="info-icon">i<span class="tooltip-text">Average Order Value. Gesamtumsatz / Anzahl der Bestellungen. Wird zur Berechnung des ROAS benötigt, wenn die CSV keine Umsatzdaten enthält.</span></span></label>
           <input id="aov" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 120" />
         </div>
         <div>
-          <label class="block text-sm mb-1">Deckungsbeitrag pro Bestellung (€)</label>
+          <label class="block text-sm mb-1">Deckungsbeitrag pro Bestellung (€) <span class="info-icon">i<span class="tooltip-text">Der Betrag, der nach Abzug der variablen Kosten vom Umsatz übrig bleibt. Hilft bei der Bewertung der Profitabilität.</span></span></label>
           <input id="margin" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 35" />
         </div>
         <div>
-          <label class="block text-sm mb-1">LTV (optional, €)</label>
+          <label class="block text-sm mb-1">LTV (optional, €) <span class="info-icon">i<span class="tooltip-text">Lifetime Value. Der geschätzte Gesamtumsatz, den ein Kunde über seine gesamte Lebensdauer generiert. Wichtig für langfristige Profitabilitätsanalysen.</span></span></label>
           <input id="ltv" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 240" />
         </div>
         <div>
@@ -110,7 +162,7 @@
           <input id="to" type="date" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" />
         </div>
         <div>
-          <label class="block text-sm mb-1">Attributionsfenster (Tage)</label>
+          <label class="block text-sm mb-1">Attributionsfenster (Tage) <span class="info-icon">i<span class="tooltip-text">Der Zeitraum nach einem Klick oder Aufruf einer Anzeige, in dem eine Conversion dieser Anzeige zugeordnet wird.</span></span></label>
           <input id="attrWindow" type="number" step="1" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="7" />
         </div>
         <div class="col-span-3 mt-4 border-t border-gray-700 pt-4">
@@ -128,6 +180,10 @@
                     <label class="block text-sm mb-1">Spaltenname für "Response Type"</label>
                     <input id="tfResponseTypeCol" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" value="Response Type" placeholder="z.B. Response Type" />
                 </div>
+            </div>
+             <div class="mt-4">
+                <label class="block text-sm mb-1">Spalten für Zielgruppen-Analyse (kommagetrennt)</label>
+                <input id="tfAudienceCols" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. Jobtitel, Branche, Größte Herausforderung" />
             </div>
         </div>
         <div class="col-span-3 mt-4 border-t border-gray-700 pt-4">
@@ -225,7 +281,7 @@
       <div class="grid lg:grid-cols-2 gap-6">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xl font-semibold">Gewinner je AdSet (Anzeigengruppe)</h3>
+            <h3 class="text-xl font-semibold">Gewinner je AdSet (Anzeigengruppe) <span class="info-icon">i<span class="tooltip-text">Die beste Werbeanzeige (Ad) innerhalb jeder Anzeigengruppe (AdSet), basierend auf dem gewählten Ziel-KPI (CPL oder ROAS).</span></span></h3>
             <span class="badge">Creative‑Level</span>
           </div>
           <div class="overflow-auto max-h-[420px] rounded-lg">
@@ -237,7 +293,7 @@
         </div>
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xl font-semibold">Top Creatives (Account‑weit)</h3>
+            <h3 class="text-xl font-semibold">Top Creatives (Account‑weit) <span class="info-icon">i<span class="tooltip-text">Die besten Werbeanzeigen des gesamten Kontos, sortiert nach dem gewählten Ziel-KPI.</span></span></h3>
             <span class="badge">nach Ziel‑KPI</span>
           </div>
           <div class="overflow-auto max-h-[420px] rounded-lg">
@@ -251,11 +307,12 @@
 
       <div class="grid lg:grid-cols-2 gap-6 mt-6">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
-          <h3 class="text-xl font-semibold mb-2">Wochentags-Performance (Summe)</h3>
+          <h3 class="text-xl font-semibold mb-2">Wochentags-Performance (Summe) <span class="info-icon">i<span class="tooltip-text">Zeigt die Summe der Kosten und Conversions für jeden Wochentag im ausgewählten Zeitraum. Z.B. werden alle Montage addiert.</span></span></h3>
           <canvas id="chartWeek"></canvas>
         </div>
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
-          <h3 class="text-xl font-semibold mb-2">Budget ohne Conversions (Waste)</h3>
+          <h3 class="text-xl font-semibold">Größter "Waste" (Budget ohne Ergebnis)</h3>
+          <p class="text-xs text-gray-400 mb-2">Top-Anzeigen, die Kosten verursachen, aber keine Conversions erzielen.</p>
           <canvas id="chartWaste"></canvas>
         </div>
       </div>
@@ -264,6 +321,11 @@
         <h3 class="text-xl font-semibold mb-3">Konkrete Aktionen</h3>
         <ul id="actions" class="list-none p-0 m-0 space-y-4"></ul>
       </div>
+
+      <section id="audienceInsights" class="hidden bg-gray-800 border border-gray-700 rounded-xl p-5 mt-6">
+        <h3 class="text-xl font-semibold mb-3">Zielgruppen-Analyse aus Typeform</h3>
+        <div id="audienceSummary" class="text-gray-300"></div>
+      </section>
     </section>
 
     <!-- 3) Creative Uploader & Reviewer -->
@@ -292,7 +354,10 @@
       <h2 class="text-2xl font-semibold mb-3">Copy‑Lab</h2>
       <div class="grid md:grid-cols-2 gap-6">
         <div>
-          <label class="block text-sm mb-1">Zielgruppe & Angebot (kurz)</label>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-sm">Zielgruppe & Angebot (kurz)</label>
+            <button id="applyInsightsBtn" class="hidden text-xs bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded-md">Insights übernehmen</button>
+          </div>
           <textarea id="copyContext" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. B2B‑Entscheider, KI‑Anruftrainer, spart Zeit des Vertriebsleiters…"></textarea>
           <label class="block text-sm mb-1 mt-3">Bestehender Werbetext</label>
           <textarea id="copyInput" rows="6" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="Füge hier deinen Text ein"></textarea>
@@ -303,7 +368,7 @@
           <div class="text-xs text-gray-500 mt-2">Optional nutzt der Provider‑API‑Key oben das Modell; sonst lokale Heuristik.</div>
         </div>
         <div>
-          <h3 class="font-semibold mb-2">Bewertung</h3>
+          <h3 class="font-semibold mb-2">Bewertung <span class="info-icon">i<span class="tooltip-text">Eine KI-basierte Bewertung Ihres Werbetextes anhand von vier Kriterien: Hook (Aufmerksamkeit), Klarheit, Überzeugung (Vorteile) und CTA (Handlungsaufforderung).</span></span></h3>
           <div id="copyScore" class="text-sm text-gray-300"></div>
           <h3 class="font-semibold mt-4 mb-2">Vorschläge</h3>
           <ul id="copyIdeas" class="space-y-3 text-sm"></ul>
@@ -417,7 +482,7 @@
     }
 
     // ======= Local Storage (briefing) =======
-    const briefFields = ['goal','targetCPL','targetCPA','targetROAS','aov','margin','ltv','from','to','attrWindow', 'tfSuccess', 'tfEndingCol', 'tfResponseTypeCol', 'from-compare', 'to-compare'];
+    const briefFields = ['goal','targetCPL','targetCPA','targetROAS','aov','margin','ltv','from','to','attrWindow', 'tfSuccess', 'tfEndingCol', 'tfResponseTypeCol', 'tfAudienceCols', 'from-compare', 'to-compare'];
     function loadBrief(){
       briefFields.forEach(id=>{ const v = localStorage.getItem('brief_'+id); if(v!==null) { const el = document.getElementById(id); if(el) el.value = v; }});
       const compareChecked = localStorage.getItem('brief_compareToggle') === 'true';
@@ -605,29 +670,46 @@
 
 
     // ======= Provider (optional) =======
-    async function callProvider(payload){
+    async function callProvider(payload, type = 'performance'){
       const provider = $('#provider').value; const apiKey = $('#apiKey').value.trim();
-      if(provider==='local' || !apiKey){
+      
+      let systemPrompt = '';
+      if (type === 'performance') {
+        systemPrompt = 'You are a senior performance advertiser & data scientist. Output strictly JSON with fields: summary, actions (with keys: type, target, name, why, what). Language: German. The "summary" field must be a string containing simple HTML for structure (use <p> for paragraphs and <strong> for bolding key terms). Analyze the primary period (__agg) for the dates specified in periods.main. If present, compare it to __agg_compare from periods.compare. When describing trends, use positive phrasing for improvements (e.g., lower CPL, higher ROAS, more conversions) and avoid words like "obwohl" (although) for positive outcomes. Highlight key changes and trends clearly.';
+      } else { // audience
+        systemPrompt = 'You are a market research analyst. Your task is to analyze the provided Typeform survey answers to create a customer persona. Synthesize the information into a concise summary. Identify common themes, pain points, job roles, and motivations. The output must be a JSON object with a single "summary" key, containing an HTML string with paragraphs (<p>) and lists (<ul><li>). Language: German.';
+      }
+
+      if(provider==='local' && type === 'performance'){
         return { ok:true, json: localExpertExplain(payload.__agg, payload.goal, payload.targets, payload.brief, payload.__agg_compare) };
       }
+      if(provider==='local' && type === 'audience'){
+        return { ok: true, json: { summary: '<p>Die lokale Analyse unterstützt keine Zielgruppen-Zusammenfassung. Bitte wählen Sie einen API-Provider.</p>'}};
+      }
+      
       try{
-        const prompt = 'You are a senior performance advertiser & data scientist. Output strictly JSON with fields: summary, actions (with keys: type, target, name, why, what). Language: German. The "summary" field must be a string containing simple HTML for structure (use <p> for paragraphs and <strong> for bolding key terms). Analyze the primary period (__agg) for the dates specified in periods.main. If present, compare it to __agg_compare from periods.compare. When describing trends, use positive phrasing for improvements (e.g., lower CPL, higher ROAS, more conversions) and avoid words like "obwohl" (although) for positive outcomes. Highlight key changes and trends clearly.';
         if(provider==='openai'){
-          const r = await fetchWithBackoff('https://api.openai.com/v1/chat/completions',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model:'gpt-4o-mini', temperature:0.1, response_format:{type:'json_object'}, messages:[ {role:'system',content:prompt}, {role:'user',content:`DATA:\n${JSON.stringify(payload)}`} ] }) });
+          const r = await fetchWithBackoff('https://api.openai.com/v1/chat/completions',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model:'gpt-4o-mini', temperature:0.1, response_format:{type:'json_object'}, messages:[ {role:'system',content:systemPrompt}, {role:'user',content:`DATA:\n${JSON.stringify(payload)}`} ] }) });
           if(!r.ok) throw new Error('OpenAI HTTP '+r.status); const data = await r.json(); const text = data.choices?.[0]?.message?.content?.trim() || '{}';
           return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
         }
         if(provider==='gemini'){
-          const r = await fetchWithBackoff(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${encodeURIComponent(apiKey)}`,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt},{text:`DATA:\n${JSON.stringify(payload)}`}] }], generationConfig:{temperature:0.1, responseMimeType: "application/json"} }) });
+          const r = await fetchWithBackoff(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${encodeURIComponent(apiKey)}`,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{role:'user',parts:[{text:systemPrompt},{text:`DATA:\n${JSON.stringify(payload)}`}] }], generationConfig:{temperature:0.1, responseMimeType: "application/json"} }) });
           if(!r.ok) throw new Error('Gemini HTTP '+r.status); const data = await r.json(); const text = (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('\n').trim() || '{}';
           return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
         }
         if(provider==='grok'){
-          const r = await fetchWithBackoff('https://api.x.ai/v1/chat/completions',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model:'grok-2-latest', temperature:0.1, response_format:{type:'json_object'}, messages:[ {role:'system',content:prompt}, {role:'user',content:`DATA:\n${JSON.stringify(payload)}`} ] }) });
+          const r = await fetchWithBackoff('https://api.x.ai/v1/chat/completions',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model:'grok-2-latest', temperature:0.1, response_format:{type:'json_object'}, messages:[ {role:'system',content:systemPrompt}, {role:'user',content:`DATA:\n${JSON.stringify(payload)}`} ] }) });
           if(!r.ok) throw new Error('Grok HTTP '+r.status); const data = await r.json(); const text = data.choices?.[0]?.message?.content?.trim() || '{}';
           return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
         }
-      }catch(err){ console.warn('Provider call failed, fallback to local expert:', err); return { ok:true, json: localExpertExplain(payload.__agg, payload.goal, payload.targets, payload.brief, payload.__agg_compare) }; }
+      }catch(err){ 
+        console.warn('Provider call failed:', err); 
+        if (type === 'performance') {
+            return { ok:true, json: localExpertExplain(payload.__agg, payload.goal, payload.targets, payload.brief, payload.__agg_compare) };
+        }
+        return { ok: false, error: err };
+      }
     }
 
     // ======= UI: Goal toggle & Compare Toggle =======
@@ -701,7 +783,28 @@
       
       const waste = data.byAd.filter(x=>x.cost>0 && x.conv<1).sort((a,b)=>b.cost-a.cost).slice(0,10);
       const ctx2 = document.getElementById('chartWaste'); if(Chart.getChart(ctx2)) Chart.getChart(ctx2).destroy();
-      new Chart(ctx2,{type:'bar', data:{ labels:waste.map(x=>x.ad.substring(0,32)), datasets:[{label:'Waste (€)', data:waste.map(x=>x.cost), backgroundColor: '#ef4444'}] }, options:{responsive:true, plugins:{legend:{position:'bottom'}}}});
+      new Chart(ctx2,{type:'bar', data:{ labels:waste.map(x=>x.ad.substring(0,32)), datasets:[{label:'Waste (€)', data:waste.map(x=>x.cost), backgroundColor: '#ef4444'}] }, 
+        options:{
+            responsive:true, 
+            plugins:{
+                legend:{
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        title: (tooltipItems) => {
+                            const index = tooltipItems[0].dataIndex;
+                            return waste[index].ad; // Show full ad name in tooltip
+                        },
+                        label: (context) => {
+                            const value = context.parsed.y;
+                            return `Waste: ${fmt(value)}€`;
+                        }
+                    }
+                }
+            }
+        }
+      });
     }
 
     // ======= Export Functions =======
@@ -710,8 +813,8 @@
         const winnersTable = $('#tableWinnersByAdset').parentElement.innerHTML;
         const topCreativesTable = $('#tableTopCreatives').parentElement.innerHTML;
         const actionsList = $('#actions').innerHTML;
+        const audienceSummary = $('#audienceInsights').classList.contains('hidden') ? '' : $('#audienceSummary').innerHTML;
 
-        // Get charts as images, check if they exist first
         const chartWeekCanvas = document.getElementById('chartWeek');
         const chartWasteCanvas = document.getElementById('chartWaste');
         const chartWeekInstance = Chart.getChart(chartWeekCanvas);
@@ -739,41 +842,20 @@
         const htmlContent = `
             <!DOCTYPE html>
             <html lang="de">
-            <head>
-                <meta charset="UTF-8">
-                <title>Analyse-Report</title>
-                ${styles}
-            </head>
+            <head><meta charset="UTF-8"><title>Analyse-Report</title>${styles}</head>
             <body>
                 <h1>Analyse-Report</h1>
-                <div class="card">
-                    <h2>Zusammenfassung</h2>
-                    ${summary}
-                </div>
+                <div class="card"><h2>Zusammenfassung</h2>${summary}</div>
+                ${audienceSummary ? `<div class="card"><h2>Zielgruppen-Analyse</h2>${audienceSummary}</div>` : ''}
                 <div class="grid">
-                    <div class="card">
-                         <h3>Gewinner je AdSet</h3>
-                         ${winnersTable}
-                    </div>
-                    <div class="card">
-                         <h3>Top Creatives</h3>
-                         ${topCreativesTable}
-                    </div>
+                    <div class="card"><h3>Gewinner je AdSet</h3>${winnersTable}</div>
+                    <div class="card"><h3>Top Creatives</h3>${topCreativesTable}</div>
                 </div>
                  <div class="grid">
-                    <div class="card">
-                         <h3>Wochentags-Performance</h3>
-                         ${chartWeekImg}
-                    </div>
-                    <div class="card">
-                         <h3>Budget ohne Conversions (Waste)</h3>
-                         ${chartWasteImg}
-                    </div>
+                    <div class="card"><h3>Wochentags-Performance</h3>${chartWeekImg}</div>
+                    <div class="card"><h3>Budget ohne Conversions (Waste)</h3>${chartWasteImg}</div>
                 </div>
-                <div class="card">
-                    <h3>Konkrete Aktionen</h3>
-                    ${actionsList}
-                </div>
+                <div class="card"><h3>Konkrete Aktionen</h3>${actionsList}</div>
             </body>
             </html>
         `;
@@ -784,11 +866,7 @@
         const htmlContent = generateReportHTML();
         const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'analyse-report.html';
-        a.click();
-        URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = url; a.download = 'analyse-report.html'; a.click(); URL.revokeObjectURL(url);
     }
 
     function exportWord() {
@@ -796,14 +874,9 @@
         const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Analyse-Report</title></head><body>";
         const footer = "</body></html>";
         const sourceHTML = header + htmlContent + footer;
-
         const blob = new Blob([sourceHTML], { type: 'application/msword' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'analyse-report.doc';
-        a.click();
-        URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = url; a.download = 'analyse-report.doc'; a.click(); URL.revokeObjectURL(url);
     }
 
 
@@ -817,9 +890,12 @@
         return `<span class="${color}">${change.toFixed(1)}%</span>`;
       };
       
+      const kpiTooltip = `Der Key Performance Indicator (KPI) für diese Analyse. Entweder CPL (Kosten pro Lead, niedriger ist besser) oder ROAS (Return on Ad Spend, höher ist besser).`;
+      const statusTooltip = `Bewertet die Anzeige im Verhältnis zum definierten Zielwert. "OK" bedeutet, das Ziel wurde erreicht oder übertroffen.`;
+
       // Top Creatives Table
       const a_thead = $('#theadTopCreatives');
-      a_thead.innerHTML = `<tr><th>Creative (Ad)</th><th>KPI</th>${compareData ? '<th>KPI (Vgl.)</th><th>Δ %</th>' : ''}<th>Conv</th>${compareData ? '<th>Conv (Vgl.)</th>' : ''}<th>Status</th></tr>`;
+      a_thead.innerHTML = `<tr><th>Creative (Ad)</th><th>KPI <span class="info-icon">i<span class="tooltip-text">${kpiTooltip}</span></span></th>${compareData ? '<th>KPI (Vgl.)</th><th>Δ %</th>' : ''}<th>Conv</th>${compareData ? '<th>Conv (Vgl.)</th>' : ''}<th>Status <span class="info-icon">i<span class="tooltip-text">${statusTooltip}</span></span></th></tr>`;
       const tb2 = $('#tableTopCreatives tbody'); tb2.innerHTML='';
       data.topCreatives.forEach(r=>{
         const kpi = goal === 'leads' ? r.cpl : r.roas;
@@ -842,7 +918,7 @@
 
       // Winners by AdSet Table
       const b_thead = $('#theadWinnersByAdset');
-       b_thead.innerHTML = `<tr><th>AdSet</th><th>Creative</th><th>KPI</th>${compareData ? '<th>KPI (Vgl.)</th><th>Δ %</th>' : ''}<th>Conv</th><th>Status</th></tr>`;
+       b_thead.innerHTML = `<tr><th>AdSet</th><th>Creative</th><th>KPI <span class="info-icon">i<span class="tooltip-text">${kpiTooltip}</span></span></th>${compareData ? '<th>KPI (Vgl.)</th><th>Δ %</th>' : ''}<th>Conv</th><th>Status <span class="info-icon">i<span class="tooltip-text">${statusTooltip}</span></span></th></tr>`;
       const tb1 = $('#tableWinnersByAdset tbody'); tb1.innerHTML='';
        data.winnersByAdset.forEach(r => {
         const compareWinner = compareData ? compareData.winnersByAdset.find(c => c.adset === r.adset) : null;
@@ -878,6 +954,8 @@
       const tfFiles = Array.from($('#fileInput-tf').files||[]);
       
       $('#results').classList.remove('hidden');
+      $('#audienceInsights').classList.add('hidden');
+      $('#applyInsightsBtn').classList.add('hidden');
       $('#execSummary').textContent = fbFiles.length? 'Analysiere Dateien…' : 'Bitte mindestens eine Facebook CSV‑Datei hochladen.';
       $('#actions').innerHTML=''; $('#tableWinnersByAdset tbody').innerHTML=''; $('#tableTopCreatives tbody').innerHTML='';
       
@@ -939,9 +1017,7 @@
         renderCharts(mainAgg, compareAgg);
 
         const payload = { 
-            goal, 
-            targets, 
-            brief,
+            goal, targets, brief,
             periods: {
                 main: { from: from.isValid() ? from.format('YYYY-MM-DD') : null, to: to.isValid() ? to.format('YYYY-MM-DD') : null },
                 compare: compareAgg ? { from: dayjs($('#from-compare').value).format('YYYY-MM-DD'), to: dayjs($('#to-compare').value).format('YYYY-MM-DD') } : null
@@ -949,9 +1025,47 @@
             __agg: mainAgg, 
             __agg_compare: compareAgg 
         };
-        const ai = await callProvider(payload);
+        const ai = await callProvider(payload, 'performance');
         $('#execSummary').innerHTML = ai?.json?.summary || 'Keine Zusammenfassung verfügbar.';
         renderActions(ai?.json?.actions || []);
+
+        // Audience Analysis
+        const audienceCols = $('#tfAudienceCols').value.split(',').map(s => s.trim()).filter(Boolean);
+        if(tfRaw.length > 0 && audienceCols.length > 0 && $('#provider').value !== 'local') {
+            $('#audienceInsights').classList.remove('hidden');
+            $('#audienceSummary').innerHTML = 'Analysiere Zielgruppen-Daten...';
+
+            const tfHeader = bestHeaderMatch(tfRaw[0], 'tf');
+            const endingCol = tfRaw[0][tfEndingCol] !== undefined ? tfEndingCol : tfHeader.ending;
+            const responseTypeCol = tfRaw[0][tfResponseTypeCol] !== undefined ? tfResponseTypeCol : tfHeader.response_type;
+
+            const audienceData = tfRaw.filter(row => {
+                 const responseType = (row[responseTypeCol] || '').toLowerCase().trim();
+                 const ending = (row[endingCol] || '').toLowerCase().trim();
+                 return responseType === 'completed' && ending.includes(tfSuccess.toLowerCase().trim());
+            }).map(row => {
+                let entry = {};
+                for(const col of audienceCols) {
+                    if(row[col]) {
+                        entry[col] = row[col];
+                    }
+                }
+                return entry;
+            }).filter(Object.keys);
+
+            if(audienceData.length > 0) {
+                const audienceResult = await callProvider({ answers: audienceData }, 'audience');
+                if (audienceResult.ok) {
+                    $('#audienceSummary').innerHTML = audienceResult.json.summary || 'Keine Zusammenfassung erhalten.';
+                    $('#applyInsightsBtn').classList.remove('hidden');
+                } else {
+                    $('#audienceSummary').innerHTML = 'Fehler bei der Zielgruppen-Analyse.';
+                }
+            } else {
+                 $('#audienceSummary').innerHTML = 'Keine Antworten in den angegebenen Spalten für erfolgreiche Leads gefunden.';
+            }
+        }
+
 
         $('#exportActions').onclick = ()=>{ const blob = new Blob([JSON.stringify(ai?.json?.actions||[],null,2)], {type:'application/json'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='actions.json'; a.click(); URL.revokeObjectURL(a.href); };
         $('#exportWord').onclick = exportWord;
@@ -980,7 +1094,7 @@
           $(`#analyze-${fileId}`).addEventListener('click', () => {
               $(`#analyze-${fileId}`).textContent = 'Analysiere...';
               const info = analyzeImage(img);
-              $(`#result-${fileId}`).innerHTML = `<div class='text-xs text-gray-400'>${info.w}×${info.h} | AR ${info.ratio} | Bright ${info.avgBrightness} | Edges ${info.edgeDensity}</div><div class='text-xs'>Checks: ${info.arOK?'✅':'❌'} AR · ${info.resOK?'✅':'❌'} Auflösung · ${info.brightOK?'✅':'❌'} Helligkeit · ${info.edgeOK?'✅':'❌'} Ruhe</div><div class='text-sm ${info.score>=3?'text-emerald-400':'text-yellow-300'}'>Qualitäts‑Score: ${info.score}/4</div>`;
+              $(`#result-${fileId}`).innerHTML = `<div class='text-xs text-gray-400'>${info.w}×${info.h} | AR ${info.ratio} | Bright ${info.avgBrightness} | Edges ${info.edgeDensity}</div><div class='text-xs'>Checks: ${info.arOK?'✅':'❌'} AR · ${info.resOK?'✅':'❌'} Auflösung · ${info.brightOK?'✅':'❌'} Helligkeit · ${info.edgeOK?'✅':'❌'} Ruhe</div><div class='text-sm ${info.score>=3?'text-emerald-400':'text-yellow-300'}'>Qualitäts‑Score: ${info.score}/4 <span class="info-icon">i<span class="tooltip-text">Bewertet das Bild auf einer Skala von 0-4 basierend auf der Einhaltung der Best Practices für Seitenverhältnis, Auflösung, Helligkeit und visuelle "Ruhe".</span></span></div>`;
               $(`#analyze-${fileId}`).remove();
           });
         } else if(file.type.startsWith('video/')){
@@ -1017,11 +1131,18 @@
     }
     
     // ======= Copy Lab =======
+    $('#applyInsightsBtn').addEventListener('click', () => {
+        const insightsHtml = $('#audienceSummary').innerHTML;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = insightsHtml;
+        $('#copyContext').value = tempDiv.textContent || '';
+    });
+    
     $('#analyzeCopy').addEventListener('click', async ()=>{
         const context = $('#copyContext').value; const copy = $('#copyInput').value; const scoreEl = $('#copyScore');
         if (!copy) { scoreEl.textContent = 'Bitte Werbetext eingeben.'; return; }
         scoreEl.innerHTML = 'Analysiere Copy...';
-        const prompt = `You are an expert direct response copywriter. Analyze the following ad copy based on the provided context. Score it on a scale of 1-10 for: 1. Hook (Grabbing attention), 2. Clarity (Easy to understand), 3. Persuasion (Benefit-driven), 4. Call to Action (Clear next step). Provide a brief one-sentence justification for each score. The output must be a JSON object with keys 'hook', 'clarity', 'persuasion', 'cta', each having 'score' and 'reason' sub-keys. CONTEXT: ${context}\n\nCOPY:\n${copy}`;
+        const prompt = `You are an expert direct response copywriter. Analyze the following ad copy based on the provided context. Score it on a scale of 1-10 for: 1. Hook (Grabbing attention), 2. Clarity (Easy to understand), 3. Persuasion (Benefit-driven), 4. Call to Action (Clear next step). Provide a brief one-sentence justification for each score IN GERMAN. The output must be a JSON object with keys 'hook', 'clarity', 'persuasion', 'cta', each having 'score' and 'reason' sub-keys. CONTEXT: ${context}\n\nCOPY:\n${copy}`;
         if ($('#provider').value === 'local' || !$('#apiKey').value) {
             const words = copy.split(/\s+/).length, sentences = copy.split(/[.!?]+/).length, hookScore = copy.length < 150 ? 8 : 4, clarityScore = words / sentences < 20 ? 7 : 4, persuasionScore = /(neu|spare|jetzt|kostenlos|garantie)/i.test(copy) ? 7 : 3, ctaScore = /(klicke|kaufe|lerne mehr|melde dich an)/i.test(copy) ? 8 : 3;
             scoreEl.innerHTML = `<p><strong>Hook: ${hookScore}/10</strong></p><p><strong>Klarheit: ${clarityScore}/10</strong></p><p><strong>Überzeugung: ${persuasionScore}/10</strong></p><p><strong>CTA: ${ctaScore}/10</strong></p><small class="text-gray-500">Lokale Heuristik.</small>`;
@@ -1035,7 +1156,7 @@
         if (!context) { ideasEl.innerHTML = '<li>Bitte Kontext (Zielgruppe & Angebot) angeben.</li>'; return; }
         if ($('#provider').value === 'local' || !$('#apiKey').value) { ideasEl.innerHTML = `<li>API-Key und Provider oben auswählen, um Vorschläge zu generieren.</li>`; return; }
         ideasEl.innerHTML = '<li>Generiere Vorschläge...</li>';
-        const prompt = `You are an expert direct response copywriter. Based on the following context and existing ad copy, generate 3 distinct ad copy variations. Each variation should try a different angle (e.g., pain-focused, benefit-focused, scarcity, social proof). The output must be a JSON object with a single key 'suggestions' which is an array of strings. CONTEXT: ${context}\n\nEXISTING COPY:\n${copy}`;
+        const prompt = `You are an expert direct response copywriter. Your task is to refine the "EXISTING COPY" based on the provided "CONTEXT". First, identify the core, non-negotiable elements in the existing copy (e.g., company name, job title, specific benefits like "KITA-Kostenübernahme", the call-to-action link). Then, generate 3 distinct variations that **preserve these core elements** but improve the overall text by applying different angles (e.g., pain-focused, benefit-focused, scarcity). The goal is to create better versions of the original ad, not entirely new ones that lose key information. The output must be a JSON object with a single key 'suggestions' which is an array of strings. CONTEXT: ${context}\n\nEXISTING COPY:\n${copy}`;
         try { const result = await callCopyProvider(prompt, {response_format:{type:'json_object'}}); const data = result.json; ideasEl.innerHTML = data.suggestions.map(s => `<li class="bg-gray-700 p-3 rounded-lg border border-gray-600">${esc(s).replace(/\n/g, '<br>')}</li>`).join(''); } catch (err) { ideasEl.innerHTML = '<li>Fehler bei der Generierung von Vorschlägen.</li>'; console.error(err); }
     });
 
@@ -1043,7 +1164,7 @@
         const provider = $('#provider').value; const apiKey = $('#apiKey').value.trim();
         let body, url, headers = {'Content-Type': 'application/json'};
         if(provider === 'openai'){ url = 'https://api.openai.com/v1/chat/completions'; headers['Authorization'] = `Bearer ${apiKey}`; body = { model:'gpt-4o-mini', temperature:0.5, messages:[{role:'user', content:prompt}], ...extraConfig }; }
-        else if (provider === 'gemini') { url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`; body = { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{temperature:0.5, responseMimeType: "application/json"} }; }
+        else if (provider === 'gemini') { url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${encodeURIComponent(apiKey)}`; body = { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{temperature:0.5, responseMimeType: "application/json"} }; }
         else if (provider === 'grok') { url = 'https://api.x.ai/v1/chat/completions'; headers['Authorization'] = `Bearer ${apiKey}`; body = { model:'grok-2-latest', temperature:0.5, messages:[{role:'user', content:prompt}], ...extraConfig }; }
         const r = await fetchWithBackoff(url, { method:'POST', headers, body: JSON.stringify(body) }); if(!r.ok) throw new Error(`${provider} HTTP ${r.status}`);
         const data = await r.json(); let text = '{}';
@@ -1055,10 +1176,5 @@
   </script>
 </body>
 </html>
-
-
-
-
-
 
 
