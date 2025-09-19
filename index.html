@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Ad Campaign Analyzer v3.4 – Dual Source & Compare</title>
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PapaParse for CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- dayjs for date parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/customParseFormat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isSameOrAfter.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/isSameOrBefore.js"></script>
+  <script>
+    dayjs.extend(dayjs_plugin_customParseFormat);
+    dayjs.extend(dayjs_plugin_isSameOrAfter);
+    dayjs.extend(dayjs_plugin_isSameOrBefore);
+  </script>
+  <!-- Chart.js for charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    .gradient-text{background:linear-gradient(90deg,#34d399,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .badge{border:1px solid #4b5563;padding:.125rem .5rem;border-radius:.5rem;font-size:.75rem}
+    .dropzone{border:2px dashed #4b5563;border-radius:1rem;padding:1.25rem;text-align:center;transition: background-color .2s ease, color .2s ease;}
+    .dropzone.dragover{background:#374151;color:#fff}
+    .results-table th,.results-table td{padding:.5rem .75rem;border-bottom:1px solid #374151}
+    .results-table th{background:#374151;position:sticky;top:0}
+    .winner{background-color:rgba(16,185,129,.1);color:#a7f3d0}
+    .loser{background-color:rgba(239,68,68,.1);color:#fca5a5}
+    details>summary{cursor:pointer; list-style: none;}
+    details>summary::-webkit-details-marker { display: none; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-200 antialiased">
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- Header -->
+    <header class="mb-6 flex flex-col items-center gap-2 text-center">
+      <h1 class="text-4xl font-bold gradient-text">AI Ad Campaign Analyzer</h1>
+      <p class="text-gray-400">CSV hochladen → Kennzahlen normalisieren → Gewinner je AdSet & Creative → Handlungsempfehlungen mit Begründung. Plus: Creative- & Copy-Lab.</p>
+      <div class="flex gap-2 text-xs">
+        <button id="selfTestBtn" class="underline text-gray-400 hover:text-gray-200">Self‑Tests ausführen</button>
+        <span id="selfTestStatus" class="badge hidden">—</span>
+      </div>
+      <div id="selfTestOutput" class="text-xs text-gray-400 whitespace-pre-wrap mt-1 hidden"></div>
+    </header>
+
+    <!-- Stepper -->
+    <ol class="grid md:grid-cols-4 gap-3 mb-6 text-sm">
+      <li class="bg-gray-800 border border-gray-700 rounded-xl p-3">
+        <div class="font-semibold">1) Briefing & Ziele</div>
+        <div class="text-gray-400">Business-Parameter, Ziel-KPIs, Zeitraum</div>
+      </li>
+      <li class="bg-gray-800 border border-gray-700 rounded-xl p-3">
+        <div class="font-semibold">2) Daten</div>
+        <div class="text-gray-400">CSV Upload, Normalisierung, Filter</div>
+      </li>
+      <li class="bg-gray-800 border border-gray-700 rounded-xl p-3">
+        <div class="font-semibold">3) Creatives</div>
+        <div class="text-gray-400">Bilder/Videos hochladen & Qualität prüfen</div>
+      </li>
+      <li class="bg-gray-800 border border-gray-700 rounded-xl p-3">
+        <div class="font-semibold">4) Copy‑Lab</div>
+        <div class="text-gray-400">Werbetexte analysieren & Vorschläge</div>
+      </li>
+    </ol>
+
+    <!-- 1) Briefing & Ziele -->
+    <section class="bg-gray-800 border border-gray-700 rounded-xl p-5 mb-6">
+      <h2 class="text-2xl font-semibold mb-3">Briefing & Ziele</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm mb-1">Kampagnenziel</label>
+          <select id="goal" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2">
+            <option value="leads" selected>Leads (CPL)</option>
+            <option value="sales">Sales (CPA / ROAS)</option>
+          </select>
+        </div>
+        <div id="cplBox">
+          <label class="block text-sm mb-1">Ziel‑CPL (€)</label>
+          <input id="targetCPL" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 12" />
+        </div>
+        <div id="cpaBox" class="hidden">
+          <label class="block text-sm mb-1">Ziel‑CPA (€)</label>
+          <input id="targetCPA" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 40" />
+        </div>
+        <div id="roasBox" class="hidden">
+          <label class="block text-sm mb-1">Mindest‑ROAS</label>
+          <input id="targetROAS" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 2.0" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Durchschnittlicher Auftragswert (AOV, €)</label>
+          <input id="aov" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 120" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Deckungsbeitrag pro Bestellung (€)</label>
+          <input id="margin" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 35" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">LTV (optional, €)</label>
+          <input id="ltv" type="number" step="0.01" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. 240" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Von (Datum)</label>
+          <input id="from" type="date" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Bis (Datum)</label>
+          <input id="to" type="date" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Attributionsfenster (Tage)</label>
+          <input id="attrWindow" type="number" step="1" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="7" />
+        </div>
+        <div class="col-span-3 mt-4 border-t border-gray-700 pt-4">
+            <h3 class="text-md font-semibold text-gray-400 mb-2">Typeform-Einstellungen (wenn FB-Conversions fehlen)</h3>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm mb-1">Text für "Erfolgreich"</label>
+                    <input id="tfSuccess" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. Default Ending" />
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Spaltenname für "Ending"</label>
+                    <input id="tfEndingCol" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" value="Ending" placeholder="z.B. Ending" />
+                </div>
+                 <div>
+                    <label class="block text-sm mb-1">Spaltenname für "Response Type"</label>
+                    <input id="tfResponseTypeCol" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" value="Response Type" placeholder="z.B. Response Type" />
+                </div>
+            </div>
+        </div>
+        <div class="col-span-3 mt-4 border-t border-gray-700 pt-4">
+            <div class="flex items-center gap-3">
+                <h3 class="text-md font-semibold text-gray-400">Zeitraumvergleich</h3>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="compareToggle" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </div>
+        <div id="comparePeriod" class="hidden col-span-3 grid md:grid-cols-3 gap-4 mt-2">
+            <div>
+                <label class="block text-sm mb-1">Von (Vergleichszeitraum)</label>
+                <input id="from-compare" type="date" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" />
+            </div>
+            <div>
+                <label class="block text-sm mb-1">Bis (Vergleichszeitraum)</label>
+                <input id="to-compare" type="date" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" />
+            </div>
+        </div>
+      </div>
+      <div class="text-xs text-gray-500 mt-2">Hinweis: Werte werden lokal gespeichert (LocalStorage), damit du sie nicht jedes Mal neu eingeben musst.</div>
+    </section>
+
+    <!-- 2) Daten / Uploader -->
+    <section class="bg-gray-800 border border-gray-700 rounded-xl p-5 mb-6">
+      <h2 class="text-2xl font-semibold mb-3">Daten hochladen & analysieren</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Facebook Uploader -->
+        <div>
+            <p class="text-lg font-semibold mb-2">1. Facebook Ads CSV</p>
+            <div id="dropzone-fb" class="dropzone text-gray-400 select-none">Facebook CSV hierher ziehen oder klicken</div>
+            <input id="fileInput-fb" type="file" accept=".csv" multiple class="opacity-0 w-px h-px absolute" />
+            <div class="flex justify-between items-center">
+              <ul id="fileList-fb" class="text-xs mt-3 space-y-1"></ul>
+              <button id="clear-fb" class="text-xs text-gray-500 hover:text-white mt-2">Dateien löschen</button>
+            </div>
+        </div>
+        <!-- Typeform Uploader -->
+        <div>
+            <p class="text-lg font-semibold mb-2">2. Typeform CSV (Optional)</p>
+            <div id="dropzone-tf" class="dropzone text-gray-400 select-none">Typeform CSV hierher ziehen oder klicken</div>
+            <input id="fileInput-tf" type="file" accept=".csv" multiple class="opacity-0 w-px h-px absolute" />
+            <div class="flex justify-between items-center">
+              <ul id="fileList-tf" class="text-xs mt-3 space-y-1"></ul>
+              <button id="clear-tf" class="text-xs text-gray-500 hover:text-white mt-2">Dateien löschen</button>
+            </div>
+        </div>
+      </div>
+       <div class="mt-6 bg-gray-900 border border-gray-700 rounded-xl p-4 flex items-center gap-4">
+          <div class="flex-1">
+              <label class="block text-sm mb-1">Analyse-Provider</label>
+              <select id="provider" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 mt-1">
+                <option value="local" selected>Lokale Analyse (Regel-basiert)</option>
+                <option value="openai">OpenAI (GPT-4o-mini)</option>
+                <option value="gemini">Gemini (2.5 Flash Preview)</option>
+                <option value="grok">Grok (Grok-2)</option>
+              </select>
+          </div>
+          <div class="flex-1">
+              <label class="block text-sm mb-1">API‑Key (optional)</label>
+              <input id="apiKey" type="password" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="Nur für externe Provider benötigt" />
+          </div>
+          <button id="analyzeBtn" class="mt-4 bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg w-full md:w-auto">Analyse starten</button>
+      </div>
+
+      <details class="mt-4">
+        <summary class="text-sm text-gray-400">Unterstützte Kopfzeilen & Mapping anzeigen</summary>
+        <div id="mappingHelp" class="text-xs text-gray-400 mt-2"></div>
+      </details>
+    </section>
+
+    <!-- Results -->
+    <section id="results" class="hidden">
+      <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 mb-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-semibold">Zusammenfassung</h2>
+          <div class="flex gap-2 text-xs flex-wrap">
+            <span id="badgeSource" class="badge hidden"></span>
+            <span id="badgeDropped" class="badge hidden"></span>
+            <span id="badgeRange" class="badge hidden"></span>
+            <button id="exportActions" class="badge hover:bg-gray-700">Export Aktionen (JSON)</button>
+            <button id="exportWord" class="badge hover:bg-gray-700">Export (Word)</button>
+            <button id="exportHTML" class="badge hover:bg-gray-700">Export (HTML)</button>
+          </div>
+        </div>
+        <div id="execSummary" class="text-gray-300 mt-2"></div>
+        <details class="mt-3">
+          <summary class="text-sm text-gray-400">Debug: Header‑Mapping & Beispielwerte</summary>
+          <div id="debugMap" class="text-xs text-gray-400 mt-2 grid md:grid-cols-2 gap-3"></div>
+        </details>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xl font-semibold">Gewinner je AdSet (Anzeigengruppe)</h3>
+            <span class="badge">Creative‑Level</span>
+          </div>
+          <div class="overflow-auto max-h-[420px] rounded-lg">
+            <table class="w-full results-table text-sm" id="tableWinnersByAdset">
+              <thead id="theadWinnersByAdset"></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xl font-semibold">Top Creatives (Account‑weit)</h3>
+            <span class="badge">nach Ziel‑KPI</span>
+          </div>
+          <div class="overflow-auto max-h-[420px] rounded-lg">
+            <table class="w-full results-table text-sm" id="tableTopCreatives">
+              <thead id="theadTopCreatives"></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6 mt-6">
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
+          <h3 class="text-xl font-semibold mb-2">Wochentags-Performance (Summe)</h3>
+          <canvas id="chartWeek"></canvas>
+        </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-5">
+          <h3 class="text-xl font-semibold mb-2">Budget ohne Conversions (Waste)</h3>
+          <canvas id="chartWaste"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 mt-6">
+        <h3 class="text-xl font-semibold mb-3">Konkrete Aktionen</h3>
+        <ul id="actions" class="list-none p-0 m-0 space-y-4"></ul>
+      </div>
+    </section>
+
+    <!-- 3) Creative Uploader & Reviewer -->
+    <section class="bg-gray-800 border border-gray-700 rounded-xl p-5 mt-6">
+      <h2 class="text-2xl font-semibold mb-3">Creative‑Review</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <div class="dropzone" id="creativeDrop">Bilder/Videos hierher ziehen oder klicken</div>
+          <input type="file" id="creativeInput" accept="image/*,video/mp4,video/webm" multiple class="absolute opacity-0 pointer-events-none" />
+          <div id="creativeGrid" class="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Ziel‑Placement</label>
+          <select id="placement" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2">
+            <option value="square">Feed 1:1</option>
+            <option value="portrait">Feed 4:5</option>
+            <option value="story">Story/Reel 9:16</option>
+          </select>
+          <div class="text-xs text-gray-500 mt-2">Wir prüfen Auflösung, Seitenverhältnis, Helligkeit und Kanten‑Dichte (als Proxy für Text‑/Element‑Fülle).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4) Copy Lab -->
+    <section class="bg-gray-800 border border-gray-700 rounded-xl p-5 mt-6 mb-12">
+      <h2 class="text-2xl font-semibold mb-3">Copy‑Lab</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm mb-1">Zielgruppe & Angebot (kurz)</label>
+          <textarea id="copyContext" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="z.B. B2B‑Entscheider, KI‑Anruftrainer, spart Zeit des Vertriebsleiters…"></textarea>
+          <label class="block text-sm mb-1 mt-3">Bestehender Werbetext</label>
+          <textarea id="copyInput" rows="6" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="Füge hier deinen Text ein"></textarea>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <button id="analyzeCopy" class="bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-md p-2">Copy analysieren</button>
+            <button id="suggestCopy" class="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white rounded-md p-2">Vorschläge generieren</button>
+          </div>
+          <div class="text-xs text-gray-500 mt-2">Optional nutzt der Provider‑API‑Key oben das Modell; sonst lokale Heuristik.</div>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Bewertung</h3>
+          <div id="copyScore" class="text-sm text-gray-300"></div>
+          <h3 class="font-semibold mt-4 mb-2">Vorschläge</h3>
+          <ul id="copyIdeas" class="space-y-3 text-sm"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ======= Helpers =======
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+    const HeaderAliases = {
+      fb: {
+          date: ['berichtsstart','start','day','datum','date','reporting starts','reporting start','daily','täglich','reporting period start','reporting starts (date)'],
+          campaign: ['kampagne','campaign name','campaign_name','campaign'],
+          adset: ['name der anzeigengruppe','ad set name','adset','anzeigengruppe','adset_name','anzeigenset','ad group','ad group name'],
+          ad: ['name der anzeige','ad name','anzeige','creative','ad_name','ad creative name','asset name'],
+          cost: ['ausgegebener betrag (eur)','amount spent (eur)','amount spent','cost','kosten','spend','ausgaben','spend (eur)'],
+          impressions: ['impressionen','impressions'],
+          clicks: ['klicks (alle)','clicks (all)','link-klicks','link clicks','clicks'],
+          conversions: ['ergebnisse','results','conversions','leads','purchases','purchases (facebook pixel)','total conversions'],
+          revenue: ['umsatz','purchase value','conversion value','value','total conversion value']
+      },
+      tf: {
+          date: ['submitted at', 'start date', 'datum', 'abgeschickt am'],
+          ending: ['ending', 'ende', 'form ending'],
+          response_type: ['response type', 'antworttyp']
+      }
+    };
+
+    function norm(s){
+      return String(s||'').toLowerCase().trim()
+        .replace(/[()\[\]{}]/g,'')
+        .replace(/\s+/g,' ')
+        .replace(/\u00a0/g,' ');
+    }
+
+    function bestHeaderMatch(row, source = 'fb'){
+      if (!row) return {};
+      const keys = Object.keys(row);
+      const taken = new Set();
+      const map = {};
+      const aliasSet = HeaderAliases[source];
+
+      function scoreKey(tgt, k){
+        const nk = norm(k);
+        const aliases = aliasSet[tgt];
+        if (!aliases) return {score: -1, key: null};
+        let best = {score: -1, key: null};
+        for(const a of aliases){
+          const na = norm(a);
+          if(nk === na) best = {score: 3, key: k};
+          else if(nk.includes(na)) best = best.score < 2 ? {score: 2, key: k} : best;
+          else if(nk.split(/[^a-z0-9]+/).includes(na)) best = best.score < 1 ? {score: 1, key: k} : best;
+        }
+        return best;
+      }
+      const order = source === 'fb' ? ['date','ad','adset','cost','impressions','clicks','conversions','revenue'] : ['date', 'ending', 'response_type'];
+      for(const tgt of order){
+        let candidate = {score:-1,key:null};
+        for(const k of keys){
+          if(taken.has(k)) continue;
+          const s = scoreKey(tgt,k);
+          if(s.score > candidate.score) candidate = s;
+        }
+        if(candidate.key){ map[tgt]=candidate.key; taken.add(candidate.key); }
+      }
+      return map;
+    }
+
+    const DATE_FORMATS = ['DD.MM.YYYY','YYYY-MM-DD','MM/DD/YYYY','DD/MM/YYYY', 'YYYY-MM-DDTHH:mm:ss.SSSZ'];
+    function parseDate(v){
+      if(!v) return null;
+      for(const f of DATE_FORMATS){
+        const d = dayjs(v,f,true);
+        if(d.isValid()) return d.toDate();
+      }
+      const d2 = dayjs(v);
+      return d2.isValid()? d2.toDate() : null;
+    }
+
+    function safeNum(v){
+      if(v===undefined||v===null||v==='') return 0;
+      if(typeof v==='number') return v;
+      const s = String(v)
+        .replace(/[^0-9,.-]/g,'')
+        .replace(/\.(?=\d{3}(\D|$))/g,'')
+        .replace(',', '.');
+      const n = parseFloat(s);
+      return isNaN(n)? 0 : n;
+    }
+
+    function fmt(n){ return !isFinite(n)? '—' : Number(n).toFixed(2); }
+    function esc(s){ return String(s).replace(/[&<>"]/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[m]); }
+
+    // ======= Fetch with Exponential Backoff =======
+    async function fetchWithBackoff(url, options, maxRetries = 5) {
+        let delay = 1000;
+        for (let i = 0; i < maxRetries; i++) {
+            const response = await fetch(url, options);
+            if (response.status === 429 && i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            } else {
+                return response;
+            }
+        }
+        throw new Error('Max retries exceeded');
+    }
+
+    // ======= Local Storage (briefing) =======
+    const briefFields = ['goal','targetCPL','targetCPA','targetROAS','aov','margin','ltv','from','to','attrWindow', 'tfSuccess', 'tfEndingCol', 'tfResponseTypeCol', 'from-compare', 'to-compare'];
+    function loadBrief(){
+      briefFields.forEach(id=>{ const v = localStorage.getItem('brief_'+id); if(v!==null) { const el = document.getElementById(id); if(el) el.value = v; }});
+      const compareChecked = localStorage.getItem('brief_compareToggle') === 'true';
+      $('#compareToggle').checked = compareChecked;
+      $('#comparePeriod').classList.toggle('hidden', !compareChecked);
+    }
+    function saveBrief(){
+      briefFields.forEach(id=>{ const el = document.getElementById(id); if(el) localStorage.setItem('brief_'+id, el.value||''); });
+      localStorage.setItem('brief_compareToggle', $('#compareToggle').checked);
+    }
+    briefFields.forEach(id=>{ const el = document.getElementById(id); if(el) el.addEventListener('change', saveBrief); });
+    $('#compareToggle').addEventListener('change', saveBrief);
+    loadBrief();
+
+    // ======= CSV Parsing =======
+    async function parseCSVFiles(files){
+      const rows=[];
+      for(const file of files){
+        const chunkRows=[];
+        await new Promise((res,rej)=>{
+          Papa.parse(file,{ header:true, worker:true, skipEmptyLines:true, chunk:(r)=>{ chunkRows.push(...r.data); }, complete:()=>res(), error:err=>rej(err) })
+        });
+        rows.push(...chunkRows);
+      }
+      return rows;
+    }
+    
+    // ======= Data Aggregation & Merging =======
+    function mergeData(fbRows, tfRows, tfSuccessText, tfEndingCol, tfResponseTypeCol) {
+        if(fbRows.length === 0) return [];
+        const fbHeader = bestHeaderMatch(fbRows[0], 'fb');
+        const totalFbConversions = fbRows.reduce((sum, row) => sum + safeNum(row[fbHeader.conversions]), 0);
+        
+        if (totalFbConversions > 0 || tfRows.length === 0 || !tfSuccessText.trim()) {
+            return fbRows;
+        }
+
+        const tfHeader = bestHeaderMatch(tfRows[0], 'tf');
+        const endingCol = tfRows[0][tfEndingCol] !== undefined ? tfEndingCol : tfHeader.ending;
+        const responseTypeCol = tfRows[0][tfResponseTypeCol] !== undefined ? tfResponseTypeCol : tfHeader.response_type;
+        const conversionsByDate = new Map();
+
+        for (const row of tfRows) {
+            const responseType = (row[responseTypeCol] || '').toLowerCase().trim();
+            const ending = (row[endingCol] || '').toLowerCase().trim();
+            
+            if (responseType === 'completed' && ending.includes(tfSuccessText.toLowerCase().trim())) {
+                const dateStr = row[tfHeader.date];
+                const date = parseDate(dateStr);
+                if (date) {
+                    const dayKey = dayjs(date).format('YYYY-MM-DD');
+                    conversionsByDate.set(dayKey, (conversionsByDate.get(dayKey) || 0) + 1);
+                }
+            }
+        }
+
+        const spendByDate = new Map();
+        for(const row of fbRows) {
+            const dateStr = row[fbHeader.date];
+            const date = parseDate(dateStr);
+            if(date) {
+                const dayKey = dayjs(date).format('YYYY-MM-DD');
+                spendByDate.set(dayKey, (spendByDate.get(dayKey) || 0) + safeNum(row[fbHeader.cost]));
+            }
+        }
+
+        return fbRows.map(row => {
+            const dateStr = row[fbHeader.date];
+            const date = parseDate(dateStr);
+            const newRow = { ...row };
+            newRow[fbHeader.conversions] = 0;
+
+            if (date) {
+                const dayKey = dayjs(date).format('YYYY-MM-DD');
+                const dailyConversions = conversionsByDate.get(dayKey) || 0;
+                const dailySpend = spendByDate.get(dayKey) || 0;
+                const cost = safeNum(row[fbHeader.cost]);
+
+                if (dailySpend > 0 && dailyConversions > 0) {
+                    const costShare = cost / dailySpend;
+                    const attributedConversions = dailyConversions * costShare;
+                    newRow[fbHeader.conversions] = attributedConversions;
+                }
+            }
+            return newRow;
+        });
+    }
+
+    function aggregate(rows, goal){
+      if(rows.length===0) return null;
+
+      const byAd = new Map();
+      const byAdset = new Map();
+      const byWeek = Array.from({length:7},()=>({cost:0,conv:0,rev:0}));
+      let totalCost=0,totalConv=0,totalRev=0;
+
+      for(const r of rows){
+        const h = bestHeaderMatch(r, 'fb');
+        const ad = r[h.ad] || '';
+        const adset = r[h.adset] || '';
+        if(!ad && !adset) continue;
+        const cost = safeNum(r[h.cost]);
+        const conv = safeNum(r[h.conversions]);
+        const rev  = safeNum(r[h.revenue]);
+        const date = h.date? parseDate(r[h.date]) : null;
+        const dayIdx = date? (dayjs(date).day() + 6) % 7: null; // Monday = 0
+
+        totalCost += cost; totalConv += conv; totalRev += rev;
+
+        const adKey = (ad||'N/A') + '||' + (adset||'N/A');
+        if(!byAd.has(adKey)) byAd.set(adKey,{ad:ad||'N/A',adset:adset||'N/A',cost:0,conv:0,rev:0,impressions:0,clicks:0});
+        const a=byAd.get(adKey); a.cost+=cost; a.conv+=conv; a.rev+=rev;
+        if(h.impressions) a.impressions += safeNum(r[h.impressions]);
+        if(h.clicks) a.clicks += safeNum(r[h.clicks]);
+
+        if(!byAdset.has(adset||'N/A')) byAdset.set(adset||'N/A',{adset:adset||'N/A',cost:0,conv:0,rev:0});
+        const s=byAdset.get(adset||'N/A'); s.cost+=cost; s.conv+=conv; s.rev+=rev;
+
+        if(dayIdx!==null) { byWeek[dayIdx].cost+=cost; byWeek[dayIdx].conv+=conv; byWeek[dayIdx].rev+=rev; }
+      }
+
+      const enrich = (o)=>{
+        const ctr = o.impressions? (o.clicks/o.impressions)*100 : 0;
+        const cpc = o.clicks? o.cost/o.clicks : 0;
+        const cpl = o.conv? o.cost/o.conv : Infinity;
+        const cpa = cpl;
+        const roas = o.cost>0? (o.rev/o.cost) : 0;
+        return {...o, ctr, cpc, cpl, cpa, roas};
+      };
+
+      const outByAd = Array.from(byAd.values()).map(enrich);
+      const outByAdset = Array.from(byAdset.values()).map(enrich);
+
+      const winnersByAdset = [];
+      for(const set of outByAdset){
+        const candidates = outByAd.filter(x=> x.adset===set.adset);
+        if(candidates.length){
+          let best = goal==='leads' ? [...candidates].sort((a,b)=> (a.cpl||Infinity) - (b.cpl||Infinity))[0] : [...candidates].sort((a,b)=> (b.roas||0) - (a.roas||0))[0];
+          winnersByAdset.push({adset:set.adset, ad:best.ad, cost:best.cost, conv:best.conv, kpi:goal==='leads'?best.cpl:best.roas});
+        }
+      }
+
+      const topCreatives = [...outByAd].sort((a,b)=> goal==='leads' ? (a.cpl - b.cpl) : (b.roas - a.roas)).slice(0,20);
+      const DAYS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+      const outWeek = byWeek.map((w,i)=>({ day:DAYS[i], cost:w.cost, conv:w.conv, rev:w.rev, kpi: w.conv? w.cost/w.conv : Infinity, roas: w.cost>0? w.rev/w.cost : 0 }));
+      
+      return { byAd: outByAd, byAdset: outByAdset, winnersByAdset, topCreatives, byWeek: outWeek, overall:{cost:totalCost, conv:totalConv, rev:totalRev}, _debug:{header: bestHeaderMatch(rows[0], 'fb'), sample: rows[0]} };
+    }
+
+    // ======= Local Action Expert =======
+    function localExpertExplain(data, goal, targets, brief, compareData = null){
+      const metric = goal==='leads' ? 'CPL' : (targets.roas && data.overall.rev > 0 ? 'ROAS' : 'CPA');
+      const target = goal==='leads' ? (targets.cpl||Infinity) : (metric === 'ROAS' ? (targets.roas || 0) : (targets.cpa||Infinity));
+      const bestCreative = data.topCreatives[0];
+
+      let sum = [];
+      if (bestCreative) {
+          const kpiValue = metric === 'ROAS' ? fmt(bestCreative.roas) : `${fmt(bestCreative.cpl)}€`;
+          sum.push(`**Top-Performer:** Das Creative "${bestCreative.ad}" in der Anzeigengruppe "${bestCreative.adset}" ist mit einem ${metric} von ${kpiValue} der klare Gewinner.`);
+      }
+
+      const weekSorted = goal === 'leads' 
+        ? [...data.byWeek].sort((a, b) => (a.kpi || Infinity) - (b.kpi || Infinity))
+        : [...data.byWeek].sort((a, b) => (b.roas || 0) - (a.roas || 0));
+      const bestDay = weekSorted[0];
+      if (bestDay && bestDay.cost > 0) {
+          const kpiValue = metric === 'ROAS' ? fmt(bestDay.roas) : `${fmt(bestDay.kpi)}€`;
+          sum.push(`**Bester Wochentag:** Der ${bestDay.day} liefert mit einem ${metric} von ${kpiValue} die besten Ergebnisse.`);
+      }
+      
+      let summaryHtml = sum.length > 0 
+        ? sum.map(s => `<p>${s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`).join('') 
+        : '<p>Keine eindeutigen Trends in den Daten gefunden. Überprüfen Sie den Zeitraum und die Datenmenge.</p>';
+      const actions = [];
+      
+      // PAUSE Actions
+      data.byAd.filter(ad => { const hasWaste = ad.cost >= (targets.cpl || targets.cpa || 20) && ad.conv < 1; const isOffTarget = goal === 'leads' ? ad.cpl > target * 2 : (metric === 'ROAS' ? ad.roas < target * 0.5 && ad.cost > brief.aov : ad.cpa > target * 2); return hasWaste || (isFinite(target) && isOffTarget); }).forEach(ad => { actions.push({ type: 'pause', target: 'Anzeige', name: ad.ad, why: `Diese Anzeige hat ${fmt(ad.cost)}€ ausgegeben mit nur ${fmt(ad.conv)} Conversions. Der ${metric} von ${metric==='ROAS' ? fmt(ad.roas) : fmt(ad.cpl)+'€'} ist weit vom Ziel entfernt.`, what: `Pausiere diese Anzeige in der Anzeigengruppe "${ad.adset}", um weiteres Budget zu sparen.`}); });
+      // SCALE Actions
+      data.byAd.filter(ad => { const hasEnoughConvs = ad.conv >= 3; const isOnTarget = goal === 'leads' ? ad.cpl <= target * 0.8 : (metric === 'ROAS' ? ad.roas >= target * 1.2 : ad.cpa <= target * 0.8); return hasEnoughConvs && (isFinite(target) && isOnTarget); }).forEach(ad => { actions.push({ type: 'scale', target: 'Anzeige', name: ad.ad, why: `Mit ${fmt(ad.conv)} Conversions zu einem exzellenten ${metric} von ${metric==='ROAS' ? fmt(ad.roas) : fmt(ad.cpl)+'€'} zeigt diese Anzeige starkes Potenzial.`, what: `Erhöhe das Budget für die Anzeigengruppe "${ad.adset}" schrittweise um 20-30%, solange der Ziel-KPI gehalten wird.`}); });
+      // TEST Actions
+      if(bestCreative && bestCreative.conv > 5) { actions.push({ type: 'test', target: 'Creative', name: bestCreative.ad, why: `Das Creative "${bestCreative.ad}" ist der klare Account-weite Gewinner.`, what: `Teste dieses Creative in anderen, vielversprechenden Anzeigengruppen. Erstelle außerdem 2-3 neue Varianten davon (z.B. anderer Hook, anderer CTA), um den Erfolg zu skalieren.`}); }
+
+      return { summary: summaryHtml, actions };
+    }
+
+
+    // ======= Provider (optional) =======
+    async function callProvider(payload){
+      const provider = $('#provider').value; const apiKey = $('#apiKey').value.trim();
+      if(provider==='local' || !apiKey){
+        return { ok:true, json: localExpertExplain(payload.__agg, payload.goal, payload.targets, payload.brief, payload.__agg_compare) };
+      }
+      try{
+        const prompt = 'You are a senior performance advertiser & data scientist. Output strictly JSON with fields: summary, actions (with keys: type, target, name, why, what). Language: German. The "summary" field must be a string containing simple HTML for structure (use <p> for paragraphs and <strong> for bolding key terms). Analyze the primary period (__agg) for the dates specified in periods.main. If present, compare it to __agg_compare from periods.compare. When describing trends, use positive phrasing for improvements (e.g., lower CPL, higher ROAS, more conversions) and avoid words like "obwohl" (although) for positive outcomes. Highlight key changes and trends clearly.';
+        if(provider==='openai'){
+          const r = await fetchWithBackoff('https://api.openai.com/v1/chat/completions',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model:'gpt-4o-mini', temperature:0.1, response_format:{type:'json_object'}, messages:[ {role:'system',content:prompt}, {role:'user',content:`DATA:\n${JSON.stringify(payload)}`} ] }) });
+          if(!r.ok) throw new Error('OpenAI HTTP '+r.status); const data = await r.json(); const text = data.choices?.[0]?.message?.content?.trim() || '{}';
+          return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
+        }
+        if(provider==='gemini'){
+          const r = await fetchWithBackoff(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${encodeURIComponent(apiKey)}`,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt},{text:`DATA:\n${JSON.stringify(payload)}`}] }], generationConfig:{temperature:0.1, responseMimeType: "application/json"} }) });
+          if(!r.ok) throw new Error('Gemini HTTP '+r.status); const data = await r.json(); const text = (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('\n').trim() || '{}';
+          return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
+        }
+        if(provider==='grok'){
+          const r = await fetchWithBackoff('https://api.x.ai/v1/chat/completions',{ method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`}, body: JSON.stringify({ model:'grok-2-latest', temperature:0.1, response_format:{type:'json_object'}, messages:[ {role:'system',content:prompt}, {role:'user',content:`DATA:\n${JSON.stringify(payload)}`} ] }) });
+          if(!r.ok) throw new Error('Grok HTTP '+r.status); const data = await r.json(); const text = data.choices?.[0]?.message?.content?.trim() || '{}';
+          return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
+        }
+      }catch(err){ console.warn('Provider call failed, fallback to local expert:', err); return { ok:true, json: localExpertExplain(payload.__agg, payload.goal, payload.targets, payload.brief, payload.__agg_compare) }; }
+    }
+
+    // ======= UI: Goal toggle & Compare Toggle =======
+    $('#goal').addEventListener('change', (e)=>{
+      const g=e.target.value;
+      if(g==='leads'){ $('#cplBox').classList.remove('hidden'); $('#cpaBox').classList.add('hidden'); $('#roasBox').classList.add('hidden'); }
+      else { $('#cplBox').classList.add('hidden'); $('#cpaBox').classList.remove('hidden'); $('#roasBox').classList.remove('hidden'); }
+      saveBrief();
+    });
+    $('#compareToggle').addEventListener('change', (e) => {
+        $('#comparePeriod').classList.toggle('hidden', !e.target.checked);
+    });
+
+    // ======= Mapping Help =======
+    (function renderMapping(){
+      const el = $('#mappingHelp'); if(!el) return;
+      const fbAliases = Object.entries(HeaderAliases.fb).map(([k,v])=>`<div><span class='text-gray-400'>FB ${k}</span>: <code>${v.join('</code>, <code>')}</code></div>`).join('');
+      const tfAliases = Object.entries(HeaderAliases.tf).map(([k,v])=>`<div><span class='text-gray-400'>TF ${k}</span>: <code>${v.join('</code>, <code>')}</code></div>`).join('');
+      el.innerHTML = fbAliases + '<hr class="border-gray-600 my-2">' + tfAliases;
+    })();
+
+    // ======= Dropzone Setup =======
+    function setupDropzone(type) {
+        const fileInput = $(`#fileInput-${type}`);
+        const dropzone = $(`#dropzone-${type}`);
+        const fileList = $(`#fileList-${type}`);
+        const clearBtn = $(`#clear-${type}`);
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); if (e.dataTransfer?.files?.length) { fileInput.files = e.dataTransfer.files; renderFileList(); } });
+        fileInput.addEventListener('change', renderFileList);
+        clearBtn.addEventListener('click', () => { fileInput.value = ''; renderFileList(); });
+
+        function renderFileList() { fileList.innerHTML = ''; Array.from(fileInput.files || []).forEach(f => { fileList.insertAdjacentHTML('beforeend', `<li>• ${esc(f.name)}</li>`); }); }
+    }
+    setupDropzone('fb');
+    setupDropzone('tf');
+
+
+    // ======= Self Tests =======
+    function runSelfTests(){
+      const out=[]; let ok=true; const eq=(a,b,msg)=>{ const pass = JSON.stringify(a)===JSON.stringify(b); ok = ok && pass; out.push(`${pass?'✔':'✘'} ${msg}`); };
+      eq(!!parseDate('31.07.2025'), true, 'parseDate DD.MM.YYYY valid');
+      
+      const fbRows = [{'Berichtsstart': '2025-01-01', 'Name der Anzeige': 'Ad A', 'Ausgegebener Betrag (EUR)': '100', 'Ergebnisse': '0'}];
+      const tfRows = [{'Submitted At': '2025-01-01T10:00:00Z', 'Response Type': 'Completed', 'Ending': 'Thank You Page'}];
+      const merged = mergeData(fbRows, tfRows, 'Thank You', 'Ending', 'Response Type');
+      eq(safeNum(merged[0]['Ergebnisse']).toFixed(0), '1', 'MergeData with TF success criteria works');
+
+      const box = document.getElementById('selfTestOutput');
+      box.classList.remove('hidden'); box.innerHTML = out.map(x=> (x.startsWith('✔')?`<span class='text-emerald-400'>${x}</span>`:`<span class='text-red-400'>${x}</span>`)).join('\n');
+      $('#selfTestStatus').classList.remove('hidden'); $('#selfTestStatus').textContent = ok ? 'Tests: OK' : 'Tests: Fehler';
+      return ok;
+    }
+    $('#selfTestBtn').addEventListener('click', runSelfTests);
+
+    // ======= Charts =======
+    function renderCharts(data, compareData = null){
+      const weekDatasets = [
+          {label:'Kosten (€)', data:data.byWeek.map(x=>x.cost), backgroundColor: '#3b82f6'},
+          {label:'Conversions', data:data.byWeek.map(x=>x.conv), backgroundColor: '#10b981'}
+      ];
+      if (compareData) {
+          weekDatasets.push({label:'Kosten Vgl. (€)', data:compareData.byWeek.map(x=>x.cost), backgroundColor: '#93c5fd'});
+          weekDatasets.push({label:'Conversions Vgl.', data:compareData.byWeek.map(x=>x.conv), backgroundColor: '#6ee7b7'});
+      }
+      const ctx1 = document.getElementById('chartWeek'); if(Chart.getChart(ctx1)) Chart.getChart(ctx1).destroy();
+      new Chart(ctx1,{type:'bar', data:{ labels: data.byWeek.map(x=>x.day), datasets: weekDatasets}, options:{responsive:true, plugins:{legend:{position:'bottom'}}} });
+      
+      const waste = data.byAd.filter(x=>x.cost>0 && x.conv<1).sort((a,b)=>b.cost-a.cost).slice(0,10);
+      const ctx2 = document.getElementById('chartWaste'); if(Chart.getChart(ctx2)) Chart.getChart(ctx2).destroy();
+      new Chart(ctx2,{type:'bar', data:{ labels:waste.map(x=>x.ad.substring(0,32)), datasets:[{label:'Waste (€)', data:waste.map(x=>x.cost), backgroundColor: '#ef4444'}] }, options:{responsive:true, plugins:{legend:{position:'bottom'}}}});
+    }
+
+    // ======= Export Functions =======
+    function generateReportHTML() {
+        const summary = $('#execSummary').innerHTML;
+        const winnersTable = $('#tableWinnersByAdset').parentElement.innerHTML;
+        const topCreativesTable = $('#tableTopCreatives').parentElement.innerHTML;
+        const actionsList = $('#actions').innerHTML;
+
+        // Get charts as images, check if they exist first
+        const chartWeekCanvas = document.getElementById('chartWeek');
+        const chartWasteCanvas = document.getElementById('chartWaste');
+        const chartWeekInstance = Chart.getChart(chartWeekCanvas);
+        const chartWasteInstance = Chart.getChart(chartWasteCanvas);
+
+        const chartWeekImg = chartWeekInstance ? `<img src="${chartWeekInstance.toBase64Image()}" alt="Wochentags-Performance" style="max-width:100%; height:auto;">` : '<p>Chart nicht verfügbar.</p>';
+        const chartWasteImg = chartWasteInstance ? `<img src="${chartWasteInstance.toBase64Image()}" alt="Budget ohne Conversions" style="max-width:100%; height:auto;">` : '<p>Chart nicht verfügbar.</p>';
+
+        const styles = `
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #333; margin: 20px; }
+                h1, h2, h3 { color: #111; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 12px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                ul { list-style: none; padding: 0; }
+                li { background: #f9f9f9; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+                strong { color: #555; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;}
+                .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+                @media print { .grid { grid-template-columns: 1fr; } }
+            </style>
+        `;
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="de">
+            <head>
+                <meta charset="UTF-8">
+                <title>Analyse-Report</title>
+                ${styles}
+            </head>
+            <body>
+                <h1>Analyse-Report</h1>
+                <div class="card">
+                    <h2>Zusammenfassung</h2>
+                    ${summary}
+                </div>
+                <div class="grid">
+                    <div class="card">
+                         <h3>Gewinner je AdSet</h3>
+                         ${winnersTable}
+                    </div>
+                    <div class="card">
+                         <h3>Top Creatives</h3>
+                         ${topCreativesTable}
+                    </div>
+                </div>
+                 <div class="grid">
+                    <div class="card">
+                         <h3>Wochentags-Performance</h3>
+                         ${chartWeekImg}
+                    </div>
+                    <div class="card">
+                         <h3>Budget ohne Conversions (Waste)</h3>
+                         ${chartWasteImg}
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Konkrete Aktionen</h3>
+                    ${actionsList}
+                </div>
+            </body>
+            </html>
+        `;
+        return htmlContent;
+    }
+
+    function exportHTML() {
+        const htmlContent = generateReportHTML();
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'analyse-report.html';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function exportWord() {
+        const htmlContent = generateReportHTML();
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Analyse-Report</title></head><body>";
+        const footer = "</body></html>";
+        const sourceHTML = header + htmlContent + footer;
+
+        const blob = new Blob([sourceHTML], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'analyse-report.doc';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+
+    // ======= Tables & Actions =======
+    function renderTables(data, goal, targets, compareData = null){
+      const metric = goal==='leads' ? 'CPL' : (targets.roas? 'ROAS' : 'CPA');
+      const renderChange = (val1, val2) => {
+        if (!isFinite(val1) || !isFinite(val2) || val2 === 0) return '—';
+        const change = ((val1 - val2) / val2) * 100;
+        const color = (metric === 'ROAS' ? change >= 0 : change <= 0) ? 'text-emerald-400' : 'text-red-400';
+        return `<span class="${color}">${change.toFixed(1)}%</span>`;
+      };
+      
+      // Top Creatives Table
+      const a_thead = $('#theadTopCreatives');
+      a_thead.innerHTML = `<tr><th>Creative (Ad)</th><th>KPI</th>${compareData ? '<th>KPI (Vgl.)</th><th>Δ %</th>' : ''}<th>Conv</th>${compareData ? '<th>Conv (Vgl.)</th>' : ''}<th>Status</th></tr>`;
+      const tb2 = $('#tableTopCreatives tbody'); tb2.innerHTML='';
+      data.topCreatives.forEach(r=>{
+        const kpi = goal === 'leads' ? r.cpl : r.roas;
+        const compareRow = compareData ? compareData.byAd.find(c => c.ad === r.ad && c.adset === r.adset) : null;
+        const kpiCompare = compareRow ? (goal === 'leads' ? compareRow.cpl : compareRow.roas) : null;
+        
+        let status;
+        const targetNum = goal==='leads' ? (targets.cpl||Infinity) : (targets.roas? targets.roas : (targets.cpa||Infinity));
+        if(goal==='leads'){ status = (isFinite(targetNum) && r.conv>0) ? (r.cpl <= targetNum ? 'OK' : 'Über Ziel') : (r.conv<1 && r.cost>0 ? 'Verbrennt' : '—'); }
+        else { status = (r.roas>0 && isFinite(targetNum)) ? (r.roas >= targetNum ? 'OK' : 'Unter Ziel') : (r.cost>0 && r.conv<1 ? 'Verbrennt' : '—'); }
+        const cls = status==='OK' ? 'winner' : (status==='Verbrennt' || status==='Über Ziel' || status==='Unter Ziel' ? 'loser' : '');
+        
+        let rowHtml = `<tr class="${cls}"><td>${esc(r.ad)}</td><td>${metric} ${fmt(kpi)}</td>`;
+        if (compareData) { rowHtml += `<td>${metric} ${fmt(kpiCompare)}</td><td>${renderChange(kpi, kpiCompare)}</td>`; }
+        rowHtml += `<td>${fmt(r.conv)}</td>`;
+        if (compareData) { rowHtml += `<td>${fmt(compareRow?.conv)}</td>`; }
+        rowHtml += `<td>${status}</td></tr>`;
+        tb2.insertAdjacentHTML('beforeend', rowHtml);
+      });
+
+      // Winners by AdSet Table
+      const b_thead = $('#theadWinnersByAdset');
+       b_thead.innerHTML = `<tr><th>AdSet</th><th>Creative</th><th>KPI</th>${compareData ? '<th>KPI (Vgl.)</th><th>Δ %</th>' : ''}<th>Conv</th><th>Status</th></tr>`;
+      const tb1 = $('#tableWinnersByAdset tbody'); tb1.innerHTML='';
+       data.winnersByAdset.forEach(r => {
+        const compareWinner = compareData ? compareData.winnersByAdset.find(c => c.adset === r.adset) : null;
+        const kpiCompare = compareWinner ? compareWinner.kpi : null;
+        const ok = goal === 'leads' ? r.kpi <= targets.cpl : r.kpi >= targets.roas;
+        const status = isFinite(targets.cpl) || isFinite(targets.roas) ? (ok ? 'OK' : 'Off-Target') : '—';
+        
+        let rowHtml = `<tr class="${status === 'OK' ? 'winner': ''}"><td>${esc(r.adset)}</td><td>${esc(r.ad)}</td><td>${metric} ${fmt(r.kpi)}</td>`;
+        if (compareData) { rowHtml += `<td>${metric} ${fmt(kpiCompare)}</td><td>${renderChange(r.kpi, kpiCompare)}</td>`; }
+        rowHtml += `<td>${fmt(r.conv)}</td><td>${status}</td></tr>`;
+        tb1.insertAdjacentHTML('beforeend', rowHtml);
+    });
+    }
+
+    function renderActions(list){
+        const ul = $('#actions'); ul.innerHTML = '';
+        if (list.length === 0) { ul.innerHTML = '<li>Keine unmittelbaren Aktionen basierend auf den aktuellen Regeln gefunden.</li>'; return; }
+        list.forEach(a => {
+            const actionCard = `
+                <li class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <div class="font-semibold text-lg">${a.type.charAt(0).toUpperCase() + a.type.slice(1)}: <span class="text-emerald-400">${esc(a.name)}</span></div>
+                    <div class="mt-2"> <strong class="text-gray-400">Warum:</strong> <p class="text-sm text-gray-300">${esc(a.why)}</p> </div>
+                    <div class="mt-2"> <strong class="text-gray-400">Was zu tun ist:</strong> <p class="text-sm text-gray-300">${esc(a.what)}</p> </div>
+                </li>`;
+            ul.insertAdjacentHTML('beforeend', actionCard);
+        });
+    }
+
+
+    // ======= Analyze Button =======
+    document.getElementById('analyzeBtn').addEventListener('click', async ()=>{
+      const fbFiles = Array.from($('#fileInput-fb').files||[]);
+      const tfFiles = Array.from($('#fileInput-tf').files||[]);
+      
+      $('#results').classList.remove('hidden');
+      $('#execSummary').textContent = fbFiles.length? 'Analysiere Dateien…' : 'Bitte mindestens eine Facebook CSV‑Datei hochladen.';
+      $('#actions').innerHTML=''; $('#tableWinnersByAdset tbody').innerHTML=''; $('#tableTopCreatives tbody').innerHTML='';
+      
+      if(!fbFiles.length) return;
+      try{
+        let fbRaw = await parseCSVFiles(fbFiles);
+        const tfRaw = tfFiles.length > 0 ? await parseCSVFiles(tfFiles) : [];
+        const total = fbRaw.length;
+        
+        const clean = fbRaw.filter(r=>{ const ad=(r['Name der Anzeige']||'').toString().trim(); const adset=(r['Name der Anzeigengruppe']||'').toString().trim(); const spend=safeNum(r['Ausgegebener Betrag (EUR)']); const isAgg=(!ad && !adset && spend>0); return !isAgg && (ad || adset); });
+        
+        const tfSuccess = $('#tfSuccess').value;
+        const tfEndingCol = $('#tfEndingCol').value;
+        const tfResponseTypeCol = $('#tfResponseTypeCol').value;
+        let mergedData = mergeData(clean, tfRaw, tfSuccess, tfEndingCol, tfResponseTypeCol);
+
+        const filterByDate = (rows, from, to) => rows.filter(r=>{ const h=bestHeaderMatch(r, 'fb'); const d=parseDate(r[h.date]); const okFrom = !from.isValid() || (d && dayjs(d).isSameOrAfter(from,'day')); const okTo = !to.isValid() || (d && dayjs(d).isSameOrBefore(to,'day')); return okFrom && okTo; });
+
+        const from = dayjs($('#from').value || undefined);
+        const to   = dayjs($('#to').value   || undefined);
+        const mainPeriodData = filterByDate(mergedData, from, to);
+        
+        let compareAgg = null;
+        const compareIsOn = $('#compareToggle').checked;
+        if(compareIsOn) {
+            const fromCompare = dayjs($('#from-compare').value || undefined);
+            const toCompare   = dayjs($('#to-compare').value   || undefined);
+            if(fromCompare.isValid() && toCompare.isValid()){
+                const comparePeriodData = filterByDate(mergedData, fromCompare, toCompare);
+                compareAgg = aggregate(comparePeriodData, $('#goal').value);
+            }
+        }
+        
+        let rangeText = '';
+        if(from.isValid() || to.isValid()){ rangeText = `${from.isValid()?from.format('YYYY-MM-DD'):'…'} → ${to.isValid()?to.format('YYYY-MM-DD'):'…'}`; }
+
+        $('#badgeSource').textContent = `Quelle: Facebook ${tfRaw.length > 0 ? '+ Typeform' : ''}`;
+        $('#badgeSource').classList.remove('hidden');
+        const dropped = total - mainPeriodData.length; if(dropped>0){ $('#badgeDropped').textContent = `Verworfen: ${dropped} Zeilen`; $('#badgeDropped').classList.remove('hidden'); }
+        if(rangeText){ $('#badgeRange').textContent = `Zeitraum: ${rangeText}`; $('#badgeRange').classList.remove('hidden'); }
+
+        const goal = $('#goal').value;
+        const targets = { cpl: safeNum($('#targetCPL').value), cpa: safeNum($('#targetCPA').value), roas: safeNum($('#targetROAS').value) };
+        const brief = { aov: safeNum($('#aov').value), margin: safeNum($('#margin').value), ltv: safeNum($('#ltv').value), attrWindow: parseInt($('#attrWindow').value||'0',10)||0 };
+        const mainAgg = aggregate(mainPeriodData, goal);
+
+        if(!mainAgg) {
+          $('#execSummary').textContent = 'Keine validen Daten im Hauptzeitraum gefunden.';
+          return;
+        }
+
+        $('#debugMap').innerHTML = '';
+        if (mainAgg._debug.sample) {
+          const h = mainAgg._debug.header; const sample = mainAgg._debug.sample;
+          for(const k in h){ $('#debugMap').insertAdjacentHTML('beforeend', `<div><span class='text-gray-500'>${k}</span>: <code>${esc(h[k]||'-')}</code> → <code>${esc(sample[h[k]])}</code></div>`); }
+        }
+
+        renderTables(mainAgg, goal, targets, compareAgg);
+        renderCharts(mainAgg, compareAgg);
+
+        const payload = { 
+            goal, 
+            targets, 
+            brief,
+            periods: {
+                main: { from: from.isValid() ? from.format('YYYY-MM-DD') : null, to: to.isValid() ? to.format('YYYY-MM-DD') : null },
+                compare: compareAgg ? { from: dayjs($('#from-compare').value).format('YYYY-MM-DD'), to: dayjs($('#to-compare').value).format('YYYY-MM-DD') } : null
+            },
+            __agg: mainAgg, 
+            __agg_compare: compareAgg 
+        };
+        const ai = await callProvider(payload);
+        $('#execSummary').innerHTML = ai?.json?.summary || 'Keine Zusammenfassung verfügbar.';
+        renderActions(ai?.json?.actions || []);
+
+        $('#exportActions').onclick = ()=>{ const blob = new Blob([JSON.stringify(ai?.json?.actions||[],null,2)], {type:'application/json'}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='actions.json'; a.click(); URL.revokeObjectURL(a.href); };
+        $('#exportWord').onclick = exportWord;
+        $('#exportHTML').onclick = exportHTML;
+      }catch(err){ console.error(err); $('#execSummary').textContent='Fehler bei der Analyse. Bitte CSV‑Format prüfen.'; }
+    });
+
+    // ======= Creative Review =======
+    const creativeDrop = $('#creativeDrop'); const creativeInput = $('#creativeInput');
+    creativeDrop.addEventListener('click', ()=> creativeInput.click());
+    creativeDrop.addEventListener('dragover', e=>{ e.preventDefault(); creativeDrop.classList.add('dragover'); });
+    creativeDrop.addEventListener('dragleave', ()=> creativeDrop.classList.remove('dragover'));
+    creativeDrop.addEventListener('drop', e=>{ e.preventDefault(); creativeDrop.classList.remove('dragover'); if(e.dataTransfer?.files?.length){ handleCreativeFiles(e.dataTransfer.files); } });
+    creativeInput.addEventListener('change', ()=> handleCreativeFiles(creativeInput.files));
+
+    async function handleCreativeFiles(files){
+      const grid = $('#creativeGrid');
+      grid.innerHTML = '';
+      for(const file of files){
+        const url = URL.createObjectURL(file);
+        const fileId = 'creative-' + Math.random().toString(36).substring(2, 9);
+        if(file.type.startsWith('image/')){
+          const card = renderCreativeCard(file.name, url, {note: 'Bereit zur Analyse'}, 'image', fileId);
+          grid.insertAdjacentHTML('beforeend', card);
+          const img = new Image(); img.src = url; await img.decode();
+          $(`#analyze-${fileId}`).addEventListener('click', () => {
+              $(`#analyze-${fileId}`).textContent = 'Analysiere...';
+              const info = analyzeImage(img);
+              $(`#result-${fileId}`).innerHTML = `<div class='text-xs text-gray-400'>${info.w}×${info.h} | AR ${info.ratio} | Bright ${info.avgBrightness} | Edges ${info.edgeDensity}</div><div class='text-xs'>Checks: ${info.arOK?'✅':'❌'} AR · ${info.resOK?'✅':'❌'} Auflösung · ${info.brightOK?'✅':'❌'} Helligkeit · ${info.edgeOK?'✅':'❌'} Ruhe</div><div class='text-sm ${info.score>=3?'text-emerald-400':'text-yellow-300'}'>Qualitäts‑Score: ${info.score}/4</div>`;
+              $(`#analyze-${fileId}`).remove();
+          });
+        } else if(file.type.startsWith('video/')){
+          grid.insertAdjacentHTML('beforeend', renderCreativeCard(file.name, url, {note:'Video‑Vorschau (Analyse nicht unterstützt)'}, 'video', fileId));
+        }
+      }
+    }
+
+    function analyzeImage(img){
+      const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight; ctx.drawImage(img,0,0);
+      const {width:w, height:h} = canvas; const ratio = (w/h).toFixed(2);
+      const data = ctx.getImageData(0,0,w,h).data;
+      let sum=0; for(let i=0;i<data.length;i+=4){ const r=data[i], g=data[i+1], b=data[i+2]; sum += (0.2126*r+0.7152*g+0.0722*b); }
+      const avgBrightness = sum / (data.length/4) / 255;
+      let edges=0; const step = Math.max(1, Math.floor((w*h)/50000));
+      for(let y=0;y<h;y+=step){ for(let x=1;x<w;x+=step){ const i1=((y*w)+x)*4, i0=((y*w)+x-1)*4; const d = Math.abs(data[i1]-data[i0])+Math.abs(data[i1+1]-data[i0+1])+Math.abs(data[i1+2]-data[i0+2]); if(d>90) edges++; }}
+      const edgeDensity = edges / ((w*h)/(step*step));
+      const placement = $('#placement').value;
+      const ideal = placement==='square'? 1 : (placement==='portrait'? 0.8 : 0.56);
+      const arOK = Math.abs((w/h)-ideal) < 0.1;
+      const resOK = (w>=1080 && h>=1080);
+      const brightOK = (avgBrightness>=0.25 && avgBrightness<=0.85);
+      const edgeOK = edgeDensity<=0.18;
+      const score = (arOK?1:0) + (resOK?1:0) + (brightOK?1:0) + (edgeOK?1:0);
+      return { w, h, ratio, avgBrightness: Number(avgBrightness.toFixed(2)), edgeDensity: Number(edgeDensity.toFixed(2)), arOK, resOK, brightOK, edgeOK, score };
+    }
+
+    function renderCreativeCard(name, url, info, kind, fileId){
+      const analysisButton = kind==='image' ? `<button id="analyze-${fileId}" class="text-xs bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded-md mt-2 w-full">Analysieren</button>` : '';
+      const initialInfo = `<div class='text-xs text-gray-400'>${esc(info.note||'')}</div>`;
+      const media = kind==='image' ? `<img src="${url}" alt="${esc(name)}" class="w-full h-40 object-cover rounded-lg border border-gray-700"/>` : `<video src="${url}" controls class="w-full h-40 object-cover rounded-lg border border-gray-700"></video>`;
+      return `<div class="bg-gray-900 border border-gray-700 rounded-xl p-3 flex flex-col justify-between"><div>${media}<div class="mt-2"><div class="font-semibold text-sm truncate">${esc(name)}</div><div id="result-${fileId}">${initialInfo}</div></div></div>${analysisButton}</div>`;
+    }
+    
+    // ======= Copy Lab =======
+    $('#analyzeCopy').addEventListener('click', async ()=>{
+        const context = $('#copyContext').value; const copy = $('#copyInput').value; const scoreEl = $('#copyScore');
+        if (!copy) { scoreEl.textContent = 'Bitte Werbetext eingeben.'; return; }
+        scoreEl.innerHTML = 'Analysiere Copy...';
+        const prompt = `You are an expert direct response copywriter. Analyze the following ad copy based on the provided context. Score it on a scale of 1-10 for: 1. Hook (Grabbing attention), 2. Clarity (Easy to understand), 3. Persuasion (Benefit-driven), 4. Call to Action (Clear next step). Provide a brief one-sentence justification for each score. The output must be a JSON object with keys 'hook', 'clarity', 'persuasion', 'cta', each having 'score' and 'reason' sub-keys. CONTEXT: ${context}\n\nCOPY:\n${copy}`;
+        if ($('#provider').value === 'local' || !$('#apiKey').value) {
+            const words = copy.split(/\s+/).length, sentences = copy.split(/[.!?]+/).length, hookScore = copy.length < 150 ? 8 : 4, clarityScore = words / sentences < 20 ? 7 : 4, persuasionScore = /(neu|spare|jetzt|kostenlos|garantie)/i.test(copy) ? 7 : 3, ctaScore = /(klicke|kaufe|lerne mehr|melde dich an)/i.test(copy) ? 8 : 3;
+            scoreEl.innerHTML = `<p><strong>Hook: ${hookScore}/10</strong></p><p><strong>Klarheit: ${clarityScore}/10</strong></p><p><strong>Überzeugung: ${persuasionScore}/10</strong></p><p><strong>CTA: ${ctaScore}/10</strong></p><small class="text-gray-500">Lokale Heuristik.</small>`;
+            return;
+        }
+        try { const result = await callCopyProvider(prompt, {response_format:{type:'json_object'}}); const data = result.json; scoreEl.innerHTML = `<p><strong>Hook: ${data.hook.score}/10</strong> – <span class="text-gray-400">${esc(data.hook.reason)}</span></p><p><strong>Klarheit: ${data.clarity.score}/10</strong> – <span class="text-gray-400">${esc(data.clarity.reason)}</span></p><p><strong>Überzeugung: ${data.persuasion.score}/10</strong> – <span class="text-gray-400">${esc(data.persuasion.reason)}</span></p><p><strong>CTA: ${data.cta.score}/10</strong> – <span class="text-gray-400">${esc(data.cta.reason)}</span></p>`; } catch(err) { scoreEl.textContent = 'Fehler bei der Analyse via API.'; console.error(err); }
+    });
+
+    $('#suggestCopy').addEventListener('click', async ()=>{
+        const context = $('#copyContext').value; const copy = $('#copyInput').value; const ideasEl = $('#copyIdeas');
+        if (!context) { ideasEl.innerHTML = '<li>Bitte Kontext (Zielgruppe & Angebot) angeben.</li>'; return; }
+        if ($('#provider').value === 'local' || !$('#apiKey').value) { ideasEl.innerHTML = `<li>API-Key und Provider oben auswählen, um Vorschläge zu generieren.</li>`; return; }
+        ideasEl.innerHTML = '<li>Generiere Vorschläge...</li>';
+        const prompt = `You are an expert direct response copywriter. Based on the following context and existing ad copy, generate 3 distinct ad copy variations. Each variation should try a different angle (e.g., pain-focused, benefit-focused, scarcity, social proof). The output must be a JSON object with a single key 'suggestions' which is an array of strings. CONTEXT: ${context}\n\nEXISTING COPY:\n${copy}`;
+        try { const result = await callCopyProvider(prompt, {response_format:{type:'json_object'}}); const data = result.json; ideasEl.innerHTML = data.suggestions.map(s => `<li class="bg-gray-700 p-3 rounded-lg border border-gray-600">${esc(s).replace(/\n/g, '<br>')}</li>`).join(''); } catch (err) { ideasEl.innerHTML = '<li>Fehler bei der Generierung von Vorschlägen.</li>'; console.error(err); }
+    });
+
+    async function callCopyProvider(prompt, extraConfig = {}){
+        const provider = $('#provider').value; const apiKey = $('#apiKey').value.trim();
+        let body, url, headers = {'Content-Type': 'application/json'};
+        if(provider === 'openai'){ url = 'https://api.openai.com/v1/chat/completions'; headers['Authorization'] = `Bearer ${apiKey}`; body = { model:'gpt-4o-mini', temperature:0.5, messages:[{role:'user', content:prompt}], ...extraConfig }; }
+        else if (provider === 'gemini') { url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`; body = { contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{temperature:0.5, responseMimeType: "application/json"} }; }
+        else if (provider === 'grok') { url = 'https://api.x.ai/v1/chat/completions'; headers['Authorization'] = `Bearer ${apiKey}`; body = { model:'grok-2-latest', temperature:0.5, messages:[{role:'user', content:prompt}], ...extraConfig }; }
+        const r = await fetchWithBackoff(url, { method:'POST', headers, body: JSON.stringify(body) }); if(!r.ok) throw new Error(`${provider} HTTP ${r.status}`);
+        const data = await r.json(); let text = '{}';
+        if(provider==='openai' || provider==='grok'){ text = data.choices?.[0]?.message?.content?.trim() || '{}'; }
+        else if(provider === 'gemini'){ text = (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('\n').trim() || '{}'; }
+        return { ok:true, json: JSON.parse(text.replace(/^```json/i,'').replace(/```$/,'')) };
+    }
+
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
