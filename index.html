@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Ad Campaign Analyzer v3.8 – With Tooltips</title>
+  <title>AI Ad Campaign Analyzer v3.9 – Structured Insights</title>
   <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PapaParse for CSV -->
@@ -57,7 +57,7 @@
         padding: 10px;
         position: absolute;
         z-index: 10;
-        top: 150%; /* Changed from bottom to top */
+        top: 150%;
         left: 50%;
         margin-left: -125px;
         opacity: 0;
@@ -72,7 +72,7 @@
     .info-icon .tooltip-text::after {
         content: "";
         position: absolute;
-        bottom: 100%; /* At the top of the tooltip */
+        bottom: 100%;
         left: 50%;
         margin-left: -5px;
         border-width: 5px;
@@ -83,6 +83,9 @@
         visibility: visible;
         opacity: 1;
     }
+    #audienceSummary h4 { font-size: 1rem; font-weight: 600; color: #9ca3af; margin-top: 1rem; margin-bottom: 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid #374151; }
+    #audienceSummary ul { list-style-type: disc; padding-left: 1.5rem; font-size: 0.875rem; }
+    #audienceSummary li { margin-bottom: 0.25rem; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-200 antialiased">
@@ -677,7 +680,7 @@
       if (type === 'performance') {
         systemPrompt = 'You are a senior performance advertiser & data scientist. Output strictly JSON with fields: summary, actions (with keys: type, target, name, why, what). Language: German. The "summary" field must be a string containing simple HTML for structure (use <p> for paragraphs and <strong> for bolding key terms). Analyze the primary period (__agg) for the dates specified in periods.main. If present, compare it to __agg_compare from periods.compare. When describing trends, use positive phrasing for improvements (e.g., lower CPL, higher ROAS, more conversions) and avoid words like "obwohl" (although) for positive outcomes. Highlight key changes and trends clearly.';
       } else { // audience
-        systemPrompt = 'You are a market research analyst. Your task is to analyze the provided Typeform survey answers to create a customer persona. Synthesize the information into a concise summary. Identify common themes, pain points, job roles, and motivations. The output must be a JSON object with a single "summary" key, containing an HTML string with paragraphs (<p>) and lists (<ul><li>). Language: German.';
+        systemPrompt = 'You are a market research analyst. Your task is to analyze the provided Typeform survey answers to create a customer persona. The output must be a JSON object with a single "summary" key. The summary must be a well-structured HTML string: Use <h4> for subheadings like "Demografie", "Berufserfahrung", "Motivation & Ziele", and "Schmerzpunkte". Use <ul> and <li> for bullet points under each subheading. Use <strong> to highlight key terms or data points. The entire output, including headings and content, must be in GERMAN.';
       }
 
       if(provider==='local' && type === 'performance'){
@@ -1176,5 +1179,4 @@
   </script>
 </body>
 </html>
-
 
